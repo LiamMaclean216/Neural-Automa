@@ -17,7 +17,7 @@ class Rule(nn.Module):
         self.mutation_distribution = normal.Normal(0, self.mutation_rate)
         self.cell_state_size = params["cell_state_size"]
         self.params = params
-        self.fc1 = nn.Linear(self.cell_state_size * 9 + len(params["hyperparameters"]), 4, bias = True)
+        self.fc1 = nn.Linear((self.cell_state_size  + params["n_cell_hyperparams"]) * 9, 4, bias = True)
         self.fc2 = nn.Linear(4, 4, bias = True)
         self.fc3 = nn.Linear(4, self.cell_state_size, bias = True)
         
@@ -28,6 +28,9 @@ class Rule(nn.Module):
         x = F.relu(x)
         x = self.fc3(x)
         x = torch.tanh(x)
+        
+        
+        
         return x#.squeeze(-1)
 
     #get model parameters as vector
@@ -72,6 +75,7 @@ class Rule(nn.Module):
         #print(x.shape)
         
         x = self.pad_cell_grid(x)
+        x = torch.cat((x, self.params["cell_hyperparams"]), -1)
         
         return x
     
@@ -80,5 +84,7 @@ class Rule(nn.Module):
                 [F.pad(torch.tanh(torch.rand(self.params["layer_width"], self.params["n_layers"])).float(),
                        (1,1,1,1), "constant", 0).unsqueeze(-1) for _ in range(self.cell_state_size)]
             ,-1).squeeze(-2)
+        
+        cells = torch.cat((cells, self.params["cell_hyperparams"]), -1)
         
         return cells

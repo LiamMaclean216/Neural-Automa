@@ -31,7 +31,7 @@ def evaluate_rule(rule, n_in, n_out, params, grid = None, give_labels = True):
         
         grid = rule.apply_rule(grid)
             
-        n_predicted = grid[3][5][0]
+        n_predicted = grid[params["output_cell_coord"][0]][params["output_cell_coord"][1]][0]#grid[3][5][0]
         
         if(params["verbose"]):
             print(n_predicted.squeeze().detach().numpy().item())
