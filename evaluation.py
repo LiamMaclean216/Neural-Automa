@@ -20,7 +20,7 @@ def evaluate_rule(rule, n_in, n_out, params, grid = None, give_labels = True):
         #if(params["time_per_sample"] - t <= 15):
         
         
-        if(not give_labels or t <= params["time_per_sample"] // 2):
+        if(not give_labels):# or t <= params["time_per_sample"] // 2):
             grid = insert_io(grid, torch.tensor(n_in), torch.tensor([0]))
         else:
             grid = insert_io(grid, torch.tensor(n_in), torch.tensor(n_out))
@@ -40,7 +40,7 @@ def evaluate_rule(rule, n_in, n_out, params, grid = None, give_labels = True):
         predicted_history.append(n_predicted.squeeze().detach().numpy().item())
         label_history.append(n_out[0])
         
-        if t >= 2 and t <= params["time_per_sample"] // 2:
+        if t >= 2:# and t <= params["time_per_sample"] // 2:
             reward += -torch.abs(torch.tensor(n_out) - n_predicted)
             #print(n_in, n_out, n_predicted)
             
@@ -48,36 +48,51 @@ def evaluate_rule(rule, n_in, n_out, params, grid = None, give_labels = True):
 
 def evaluate_rule_on_generator(rule, gen, params):
     reward = 0
-    grid = rule.build_grid()
+    #grid = rule.build_grid()
     history = {"predicted_history" : [], "label_history" : []}
     
     give_labels = True
-    for s in range(params["n_samples_per_evaluation"]):
-        #if(s >= (params["n_samples_per_evaluation"]*4)//5):
-        #    give_labels = False
-            
-        n_in, n_out = next(gen)
-        r, h = evaluate_rule(rule, n_in, n_out, params, grid, give_labels)
-        history["predicted_history"]+=(h["predicted_history"])
-        history["label_history"]+=(h["label_history"])
+    for gate in ["AND", "XOR", "NAND"]:
+        grid = rule.build_grid()
+        gen = gate_sample_gen(gate=gate)
+        for s in range(params["n_samples_per_evaluation"]//3):
+            #if(s % (params["n_samples_per_evaluation"]//3) == 0):
+                
+             #   grid = rule.build_grid()
+               # print(s, params["n_samples_per_evaluation"])
+
+            if(s >=  ( (params["n_samples_per_evaluation"]//3)* (4/5) ) ):
+                give_labels = False
+
+            n_in, n_out = next(gen)
+            r, h = evaluate_rule(rule, n_in, n_out, params, grid, give_labels)
+            history["predicted_history"]+=(h["predicted_history"])
+            history["label_history"]+=(h["label_history"])
+
+            if(not give_labels):
+                reward += r
+
         
-        reward += r
         #history.append(h)
         
     return reward, history
 
 def evaluate_population(rules, gen, params):
+
     history = [0] * params["population_size"]
     rewards = np.array([0] * params["population_size"])
     for idx, r  in enumerate(rules):
         rewards[idx], history[idx] = (evaluate_rule_on_generator(r, gen, params))
-        
+    
+    #print(rewards)
     arg_rewards = np.argsort(rewards)[::-1]
+   # print(arg_rewards)
     #print(rewards)
     new_rules = []
     for r in arg_rewards[0:5]:
+        
         for i in range(4):
             new_rules.append(rules[r].gen_child())
-            
+
     return new_rules, {"best_rule" : rules[arg_rewards[0]], 
                        "best_reward" : rewards[arg_rewards[0]], "best_history" : history[arg_rewards[0]]}

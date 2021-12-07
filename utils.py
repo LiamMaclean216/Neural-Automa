@@ -3,9 +3,12 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 from torch.distributions import normal
+import random
 
 def gate_sample(gate = "XOR", batch_size = 1):
    # input = (np.random.rand(N, 2) > 0.5) * 1
+    
+    
     
     values = np.array([[0,0],[0,1], [1,0], [1,1]])
     np.random.shuffle(values)
@@ -14,12 +17,18 @@ def gate_sample(gate = "XOR", batch_size = 1):
         
     elif gate == "AND":
         out = (np.logical_and(values[:,0], values[:,1]) * 1)
+        
+    elif gate == "NAND":
+        out =  (np.invert(np.logical_and(values[:,0], values[:,1])) * 1)
     
     out = np.expand_dims(out, axis=-1)
     return values*2-1, out*2-1
 
-def gate_sample_gen(gate = "XOR"):
+def gate_sample_gen(gate = None):
+    if gate is None:
+        gate = random.choice(["AND", "XOR", "NAND"])
     while True:
+        
         sample = gate_sample(gate = gate)
         for (i,o) in zip(sample[0], sample[1]):
             yield i,o
